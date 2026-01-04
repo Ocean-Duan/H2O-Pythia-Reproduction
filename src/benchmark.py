@@ -57,8 +57,6 @@ def run_benchmark(model, tokenizer, text, exp_config):
             use_cache=True,
             pad_token_id=tokenizer.eos_token_id
         )
-    
-    # ... (前面的代码不变)
 
     torch.cuda.synchronize()
     end_time = time.time()
@@ -68,21 +66,19 @@ def run_benchmark(model, tokenizer, text, exp_config):
     throughput = gen_len / total_time
     effective_kv_gb = sum(h2o_state.LAYER_KV_SIZES.values()) / 1024**3
     
-    # [新增] 打印时间分解报告 (Latency Breakdown)
-    if h2o_state.PROFILE_STEPS > 0:
-        print("\n   --- [Latency Breakdown per Step (avg ms)] ---")
-        steps = h2o_state.PROFILE_STEPS
-        stats = h2o_state.PROFILE_STATS
-        print(f"   Prep (Rotary): {stats['prep']/steps*1000:.2f} ms")
-        print(f"   Score Calc:    {stats['score']/steps*1000:.2f} ms")
-        print(f"   Evict (TopK):  {stats['evict']/steps*1000:.2f} ms")
-        print(f"   Gather/Upd:    {stats['gather']/steps*1000:.2f} ms")
-        print(f"   Attn Compute:  {stats['attn']/steps*1000:.2f} ms")
-        print(f"   Total Observed:{stats['total']/steps*1000:.2f} ms")
-        print("   ---------------------------------------------\n")
+    # (Latency Breakdown)
+    #if h2o_state.PROFILE_STEPS > 0:
+    #    print("\n [Latency Breakdown per Step (avg ms)]")
+    #    steps = h2o_state.PROFILE_STEPS
+    #    stats = h2o_state.PROFILE_STATS
+    #    print(f"   Prep (Rotary): {stats['prep']/steps*1000:.4f} ms")
+    #    print(f"   Score Calc:    {stats['score']/steps*1000:.4f} ms")
+    #    print(f"   Evict (TopK):  {stats['evict']/steps*1000:.4f} ms")
+    #    print(f"   Gather/Upd:    {stats['gather']/steps*1000:.4f} ms")
+    #    print(f"   Attn Compute:  {stats['attn']/steps*1000:.4f} ms")
+    #    print(f"   Total Observed:{stats['total']/steps*1000:.4f} ms")
+    #    print("\n")
 
-    # ---------------- Step 2: PPL 测试 ----------------
-    
     # ---------------- Step 2: PPL 测试 ----------------
     print(f"   [Running] {exp_config['name']} - PPL...")
     torch.cuda.empty_cache()
