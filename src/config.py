@@ -2,7 +2,7 @@ import torch
 
 # ================= 静态配置区域 =================
 MODEL_ID = "EleutherAI/pythia-2.8b"
-CACHE_DIR = "./RankKV/model"
+CACHE_DIR = "./model"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # 实验长度设置
