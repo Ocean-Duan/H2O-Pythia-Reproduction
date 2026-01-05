@@ -24,9 +24,9 @@ if __name__ == "__main__":
 
     # ================= 定义实验组 =================
     all_experiments = [
-        {"name": "Baseline", "compress": False, "r": 0, "h": 0},
-        {"name": "H2O (64+64)", "compress": True, "r": 64, "h": 64},
-        {"name": "Local (128)", "compress": True, "r": 128, "h": 0},
+        #{"name": "Baseline", "compress": False, "r": 0, "h": 0},
+        #{"name": "H2O (64+64)", "compress": True, "r": 64, "h": 64},
+        #{"name": "Local (128)", "compress": True, "r": 128, "h": 0},
         {"name": "H2O (128+128)", "compress": True, "r": 128, "h": 128},
         {"name": "H2O (64+192)", "compress": True, "r": 64, "h": 192},
         {"name": "H2O (32+224)", "compress": True, "r": 32, "h": 224},

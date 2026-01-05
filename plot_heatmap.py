@@ -4,22 +4,21 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.models.gpt_neox.modeling_gpt_neox import apply_rotary_pos_emb
 import math
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import seaborn as sns
 import os
+import numpy as np
 
 # ================= 配置 =================
 MODEL_ID = "EleutherAI/pythia-2.8b"
-CACHE_DIR = "./model"
+CACHE_DIR = "./RankKV/model"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# [核心修改] 要遍历的层数列表
-LAYERS_TO_PLOT = [2, 16, 30] 
+LAYERS_TO_PLOT = [1, 16, 30] 
 
-# 更加复杂的文本 (Wikitext 片段)
-COMPLEX_TEXT = """The game of billiards has a rich history starting from the 15th century in Northern Europe as an outdoor lawn game similar to croquet. The game moved indoors to a wooden table with green cloth to simulate grass, and a simple border was placed around the edges. The balls were shoved, rather than struck, with wooden sticks called "maces"."""
 
-CAPTURED_ATTN = {} # 字典存储: {layer_idx: matrix}
-# =======================================
+COMPLEX_TEXT = """The Valerian Protocol failure was triggered fundamentally by a minor algorithmic latency. Initially, the central processor delayed the emergency cooling sequence, mistaking a critical heat spike for a transient sensor glitch. This hesitation allowed core temperatures to rapidly exceed containment limits, resulting in a total meltdown. Conclusively, the facility’s destruction was not due to hardware inadequacy, but was solely the inevitable result of that specific algorithmic latency."""
+CAPTURED_ATTN = {}
 
 def h2o_capture_forward(
     self,
@@ -48,16 +47,13 @@ def h2o_capture_forward(
     if layer_past is not None:
         key, value = layer_past.update(key, value, self.layer_idx)
 
-    # 捕获逻辑：如果在目标列表中，且处于 decoding 阶段 (q_len=1)
     if self.layer_idx in LAYERS_TO_PLOT and q_len == 1:
         attn_weights = torch.matmul(query, key.transpose(-1, -2)) / math.sqrt(head_size)
         attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32)
         
-        # 存入字典
         global CAPTURED_ATTN
         CAPTURED_ATTN[self.layer_idx] = attn_weights[0, :, 0, :].detach().cpu().numpy()
 
-    # 继续前向传播
     attn_output = F.scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0)
     attn_output = attn_output.permute(0, 2, 1, 3).contiguous().view(bsz, q_len, -1)
     attn_output = self.dense(attn_output)
@@ -70,18 +66,16 @@ def inject_monitors(model):
         layer.attention.forward = types.MethodType(h2o_capture_forward, layer.attention)
 
 def plot_heatmap(layer_idx, tokens, attn_matrix):
-    plt.figure(figsize=(24, 8)) # 宽一点适合长句
+    plt.figure(figsize=(24, 8))
     
-    # 截取前 100 个 token 以免太挤
-    limit = min(100, len(tokens))
+    limit = min(200, len(tokens))
     display_tokens = [t.replace('Ġ', '').strip()[:8] for t in tokens[:limit]]
     matrix_subset = attn_matrix[:, :limit]
 
-    # 动态调整 vmax：取 95 分位数，避免某个极亮值导致全图变黑
-    import numpy as np
     dynamic_vmax = np.percentile(matrix_subset, 98) 
-    
-    sns.heatmap(matrix_subset, cmap="viridis", vmin=0, vmax=dynamic_vmax,
+    sns.heatmap(matrix_subset + 1e-6, 
+                norm=colors.LogNorm(vmin=matrix_subset.max()*0.01, vmax=matrix_subset.max()),
+                cmap="viridis", vmin=0, vmax=dynamic_vmax,
                 xticklabels=display_tokens, yticklabels=False,
                 cbar_kws={"label": "Score"})
 
